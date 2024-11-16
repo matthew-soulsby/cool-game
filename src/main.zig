@@ -1,7 +1,7 @@
 const std = @import("std");
 const rl = @cImport(@cInclude("raylib.h"));
 const Screen = @import("enums/screen.zig").Screen;
-const TitleScreen = @import("screens/title.zig").TitleScreen;
+const TitleScreen = @import("screens/title.zig");
 
 pub fn main() !void {
     const screen_width = 800;
