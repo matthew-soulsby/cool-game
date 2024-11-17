@@ -12,10 +12,19 @@ pub fn main() !void {
 
     rl.SetTargetFPS(60);
 
-    var curr_screen: Screen = .Title;
+    const curr_screen: Screen = .Title;
     var title_screen = TitleScreen{
         .title = "Cool Game",
-        .options = [_][]const u8{ "Start", "Exit" },
+        .options = &[_]TitleScreen.Option{
+            TitleScreen.Option{
+                .text = "Start",
+                .executeOnSelect = rl.ToggleBorderlessWindowed,
+            },
+            TitleScreen.Option{
+                .text = "Exit",
+                .executeOnSelect = rl.ToggleBorderlessWindowed,
+            },
+        },
     };
 
     // Main game loop
@@ -30,7 +39,7 @@ pub fn main() !void {
                     try title_screen.selectNextOption();
                 }
                 if (rl.IsKeyPressed(rl.KEY_ENTER)) {
-                    curr_screen = .Game;
+                    title_screen.options[title_screen.selected].executeOnSelect();
                 }
             },
             .Game => {},
