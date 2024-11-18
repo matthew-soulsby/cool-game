@@ -10,7 +10,19 @@ title: []const u8,
 options: []const Option,
 selected: usize = 0,
 
-pub fn selectNextOption(self: *TitleScreen) !void {
+pub fn handleInput(self: *TitleScreen) void {
+    if (rl.IsKeyPressed(rl.KEY_UP)) {
+        self.selectPrevOption();
+    }
+    if (rl.IsKeyPressed(rl.KEY_DOWN)) {
+        self.selectNextOption();
+    }
+    if (rl.IsKeyPressed(rl.KEY_ENTER)) {
+        self.options[self.selected].executeOnSelect();
+    }
+}
+
+fn selectNextOption(self: *TitleScreen) void {
     if (self.selected == self.options.len - 1) {
         self.selected = 0;
         return;
@@ -19,7 +31,7 @@ pub fn selectNextOption(self: *TitleScreen) !void {
     self.selected += 1;
 }
 
-pub fn selectPrevOption(self: *TitleScreen) !void {
+fn selectPrevOption(self: *TitleScreen) void {
     if (self.selected == 0) {
         self.selected = self.options.len - 1;
         return;
@@ -28,7 +40,7 @@ pub fn selectPrevOption(self: *TitleScreen) !void {
     self.selected -= 1;
 }
 
-pub fn draw(self: *TitleScreen, screen_width: *const u16) !void {
+pub fn draw(self: *TitleScreen, screen_width: *const u16) void {
     const half_screen_x = screen_width.* / 2;
 
     const title_width = rl.MeasureText(self.title.ptr, 50);
