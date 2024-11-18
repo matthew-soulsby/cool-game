@@ -5,8 +5,8 @@ const TitleScreen = @import("screens/title.zig");
 const GameScreen = @import("screens/game.zig");
 
 pub fn main() !void {
-    const screen_width = 800;
-    const screen_height = 450;
+    const screen_width: u16 = 800;
+    const screen_height: u16 = 450;
 
     // Init allocator
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -14,7 +14,7 @@ pub fn main() !void {
     defer {
         const deinit_status = gpa.deinit();
         if (deinit_status == .leak) {
-            @panic("TEST FAIL");
+            @panic("leaky leaky");
         }
     }
 
@@ -39,13 +39,16 @@ pub fn main() !void {
         },
     };
     curr_screen = Screen.Current{
-        .game = GameScreen{},
+        .game = GameScreen{
+            .screen_width = &screen_width,
+            .screen_height = &screen_height,
+        },
     };
     try curr_screen.game.init(&allocator);
     defer curr_screen.game.deinit();
 
     // Main game loop
-    while (!rl.WindowShouldClose()) { // Detect window close button or ESC key
+    while (!rl.WindowShouldClose()) {
         // Process input
         switch (curr_screen) {
             .title => |*title_screen| title_screen.*.handleInput(),
@@ -54,20 +57,19 @@ pub fn main() !void {
                 game_screen.*.updatePositions();
             },
         }
+
         // Draw
-        //----------------------------------------------------------------------------------
         rl.BeginDrawing();
         defer rl.EndDrawing();
 
         rl.ClearBackground(rl.DARKGRAY);
 
         switch (curr_screen) {
-            .title => |*title_screen| title_screen.*.draw(&@as(u16, screen_width)),
-            .game => |*game_screen| game_screen.*.draw(),
+            .title => |*title_screen| title_screen.*.draw(&screen_width),
+            .game => |*game_screen| try game_screen.*.draw(),
         }
 
         // Debug
         rl.DrawFPS(0, 0);
-        //----------------------------------------------------------------------------------
     }
 }

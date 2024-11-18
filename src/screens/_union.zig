@@ -6,7 +6,6 @@ const ScreenType = enum {
     game,
 };
 
-// TODO: Finish
 pub const Current = union(ScreenType) {
     title: TitleScreen,
     game: GameScreen,
