@@ -1,14 +1,22 @@
-const TitleScreen = @This();
+const std = @import("std");
 const rl = @cImport(@cInclude("raylib.h"));
+
+const TitleScreen = @This();
+const Allocator = std.mem.Allocator;
 
 pub const Option = struct {
     text: []const u8,
-    executeOnSelect: *const fn () callconv(.C) void,
+    flag_to_flip: *bool,
 };
 
+allocator: *const Allocator,
 title: []const u8,
 options: []const Option,
 selected: usize = 0,
+
+pub fn deinit(self: *TitleScreen) void {
+    self.allocator.*.free(self.options);
+}
 
 pub fn handleInput(self: *TitleScreen) void {
     if (rl.IsKeyPressed(rl.KEY_UP)) {
@@ -18,7 +26,7 @@ pub fn handleInput(self: *TitleScreen) void {
         self.selectNextOption();
     }
     if (rl.IsKeyPressed(rl.KEY_ENTER)) {
-        self.options[self.selected].executeOnSelect();
+        self.options[self.selected].flag_to_flip.* = !self.options[self.selected].flag_to_flip.*;
     }
 }
 

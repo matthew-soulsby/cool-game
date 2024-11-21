@@ -5,7 +5,7 @@ const GameScreen = @This();
 const ArrayList = std.ArrayList;
 const Allocator = std.mem.Allocator;
 
-const BASE_VELOCITY = 2.5;
+const BASE_VELOCITY = 3;
 
 const Ball = struct {
     position: rl.Vector2,
