@@ -54,6 +54,7 @@ pub fn main() !void {
             .title => |*title_screen| title_screen.*.handleInput(),
             .game => |*game_screen| {
                 game_screen.*.handleInput();
+                game_screen.*.handleBallCollisions();
                 game_screen.*.updatePositions();
             },
         }
