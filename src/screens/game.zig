@@ -12,10 +12,11 @@ const Ball = struct {
     velocity: rl.Vector2,
     size: rl.Vector2,
 
-    pub fn reset(self: *Ball, half_screen_x: f32) void {
+    pub fn reset(self: *Ball, half_screen_x: f32, random_y: f32) void {
         self.position.x = half_screen_x - (self.size.x / 2);
-        self.position.y = 2;
+        self.position.y = 2 + random_y;
 
+        self.velocity.x *= -1;
         self.velocity.y = BASE_VELOCITY;
     }
 };
@@ -44,6 +45,7 @@ full_screen_x: f32 = undefined,
 half_screen_x: f32 = undefined,
 half_screen_y: f32 = undefined,
 allocator: *const Allocator = undefined,
+rng: std.Random.Xoshiro256 = undefined,
 ball: Ball = undefined,
 player_list: ArrayList(Player) = undefined,
 paused: bool = false,
@@ -55,6 +57,11 @@ next_screen: *bool,
 
 pub fn init(self: *GameScreen, allocator: *const Allocator) !void {
     self.allocator = allocator;
+    self.rng = std.rand.DefaultPrng.init(blk: {
+        var seed: u64 = undefined;
+        try std.posix.getrandom(std.mem.asBytes(&seed));
+        break :blk seed;
+    });
     self.player_list = ArrayList(Player).init(allocator.*);
     errdefer self.player_list.deinit();
 
@@ -221,7 +228,10 @@ fn incrementScore(self: *GameScreen, player: *Player, player_no: usize) void {
     }
 
     // Reset ball
-    self.ball.reset(self.half_screen_x);
+    const random = self.rng.random();
+    const random_bound: u32 = @intFromFloat(self.half_screen_y * 2);
+    const random_y: f32 = @floatFromInt(random.uintLessThan(u32, random_bound));
+    self.ball.reset(self.half_screen_x, random_y);
 
     // Pause and resume
     self.pauseGame();
@@ -297,14 +307,13 @@ fn drawPause(self: *GameScreen) !void {
         return;
     }
 
-    const time_to_display: i8 = @intFromFloat(3 + self.resume_time - rl.GetTime());
-    const time_str = try std.fmt.allocPrintZ(self.allocator.*, "{}", .{time_to_display + 1});
-    defer self.allocator.free(time_str);
+    const time_to_display: u8 = @intFromFloat(3 + self.resume_time - rl.GetTime());
+    const time_str = [_:0]u8{time_to_display + '1'};
 
-    const half_text_x = @divTrunc(rl.MeasureText(time_str.ptr, TIME_SIZE), 2);
+    const half_text_x = @divTrunc(rl.MeasureText(&time_str, TIME_SIZE), 2);
     const half_text_y = TIME_SIZE / 2;
 
-    rl.DrawText(time_str.ptr, half_x - half_text_x, half_y - half_text_y, TIME_SIZE, rl.WHITE);
+    rl.DrawText(&time_str, half_x - half_text_x, half_y - half_text_y, TIME_SIZE, rl.WHITE);
 }
 
 pub fn deinit(self: *GameScreen) void {
