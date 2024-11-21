@@ -25,7 +25,7 @@ pub fn handleInput(self: *TitleScreen) void {
     if (rl.IsKeyPressed(rl.KEY_DOWN)) {
         self.selectNextOption();
     }
-    if (rl.IsKeyPressed(rl.KEY_ENTER)) {
+    if (rl.IsKeyPressed(rl.KEY_ENTER) or rl.IsKeyPressed(rl.KEY_SPACE)) {
         self.options[self.selected].flag_to_flip.* = !self.options[self.selected].flag_to_flip.*;
     }
 }

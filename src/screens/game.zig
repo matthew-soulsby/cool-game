@@ -5,7 +5,7 @@ const GameScreen = @This();
 const ArrayList = std.ArrayList;
 const Allocator = std.mem.Allocator;
 
-const BASE_VELOCITY = 3;
+const BASE_VELOCITY = 6;
 
 const Ball = struct {
     position: rl.Vector2,
@@ -14,7 +14,7 @@ const Ball = struct {
 
     pub fn reset(self: *Ball, half_screen_x: f32) void {
         self.position.x = half_screen_x - (self.size.x / 2);
-        self.position.y = 1;
+        self.position.y = 2;
 
         self.velocity.y = BASE_VELOCITY;
     }
@@ -46,9 +46,12 @@ half_screen_y: f32 = undefined,
 allocator: *const Allocator = undefined,
 ball: Ball = undefined,
 player_list: ArrayList(Player) = undefined,
-paused: bool = undefined,
-to_resume: bool = undefined,
+paused: bool = false,
+to_resume: bool = false,
 resume_time: f64 = undefined,
+someone_won: bool = false,
+winner: usize = undefined,
+next_screen: *bool,
 
 pub fn init(self: *GameScreen, allocator: *const Allocator) !void {
     self.allocator = allocator;
@@ -64,7 +67,7 @@ pub fn init(self: *GameScreen, allocator: *const Allocator) !void {
     self.ball = Ball{
         .position = rl.Vector2{
             .x = self.half_screen_x - half_ball,
-            .y = 1,
+            .y = 2,
         },
         .velocity = rl.Vector2{
             .x = BASE_VELOCITY,
@@ -183,10 +186,10 @@ pub fn handleBallCollisions(self: *GameScreen) void {
         .y = @floatFromInt(self.screen_height.* - 1),
     };
     // Bounce off players
-    for (self.player_list.items) |*curr_player| {
+    for (self.player_list.items, 0..) |*curr_player, index| {
         // Check player's scoring wall
         if (checkBetween(curr_player.score_wall_x, curr_player.score_wall_x + 1, self.ball.position.x)) {
-            self.incrementScore(curr_player);
+            self.incrementScore(curr_player, index);
             return;
         }
 
@@ -205,12 +208,16 @@ pub fn handleBallCollisions(self: *GameScreen) void {
     }
 }
 
-fn incrementScore(self: *GameScreen, player: *Player) void {
+fn incrementScore(self: *GameScreen, player: *Player, player_no: usize) void {
     // Add to score
     player.score += 1;
 
-    if (player.score > '5') {
-        std.debug.print("Winner !", .{});
+    if (player.score == '3') {
+        self.someone_won = true;
+        self.winner = player_no;
+        self.resume_time = rl.GetTime();
+        self.pauseGame();
+        return;
     }
 
     // Reset ball
@@ -219,6 +226,16 @@ fn incrementScore(self: *GameScreen, player: *Player) void {
     // Pause and resume
     self.pauseGame();
     self.resumeGame();
+}
+
+pub fn handleFinish(self: *GameScreen) void {
+    if (!self.someone_won) {
+        return;
+    }
+
+    if (3 < rl.GetTime() - self.resume_time) {
+        self.next_screen.* = true;
+    }
 }
 
 fn checkBetween(start: f32, end: f32, point: f32) bool {
@@ -234,6 +251,10 @@ fn checkColliding(pos_1: rl.Vector2, size_1: rl.Vector2, pos_2: rl.Vector2, size
 
 pub fn draw(self: *GameScreen) !void {
     if (self.paused) {
+        if (self.someone_won) {
+            self.drawWin();
+            return;
+        }
         try self.drawPause();
     }
 
@@ -253,15 +274,26 @@ pub fn draw(self: *GameScreen) !void {
     rl.DrawRectangleV(self.ball.position, self.ball.size, rl.WHITE);
 }
 
+fn drawWin(self: *GameScreen) void {
+    const player_number: u8 = @intCast(self.winner);
+    const winner_text = [_:0]u8{ 'P', 'l', 'a', 'y', 'e', 'r', ' ', '1' + player_number, ' ', 'w', 'i', 'n', '!' };
+
+    const FONT_SIZE = 50;
+    const text_size: f32 = @floatFromInt(rl.MeasureText(&winner_text, FONT_SIZE));
+    const text_pos_x = self.half_screen_x - @divTrunc(text_size, 2);
+
+    rl.DrawText(&winner_text, @intFromFloat(text_pos_x), @intFromFloat(self.half_screen_y - 25), FONT_SIZE, rl.WHITE);
+}
+
 fn drawPause(self: *GameScreen) !void {
     const TIME_SIZE = 75;
-    const half_screen_x = self.screen_width.* / 2;
-    const half_screen_y = self.screen_height.* / 2;
+    const half_x: c_int = @intFromFloat(self.half_screen_x);
+    const half_y: c_int = @intFromFloat(self.half_screen_y);
 
     if (!self.to_resume) {
         // Pause icon
-        rl.DrawRectangle(half_screen_x - 15, half_screen_y - 20, 10, 40, rl.WHITE);
-        rl.DrawRectangle(half_screen_x + 5, half_screen_y - 20, 10, 40, rl.WHITE);
+        rl.DrawRectangle(half_x - 15, half_y - 20, 10, 40, rl.WHITE);
+        rl.DrawRectangle(half_x + 5, half_y - 20, 10, 40, rl.WHITE);
         return;
     }
 
@@ -272,7 +304,7 @@ fn drawPause(self: *GameScreen) !void {
     const half_text_x = @divTrunc(rl.MeasureText(time_str.ptr, TIME_SIZE), 2);
     const half_text_y = TIME_SIZE / 2;
 
-    rl.DrawText(time_str.ptr, half_screen_x - half_text_x, half_screen_y - half_text_y, TIME_SIZE, rl.WHITE);
+    rl.DrawText(time_str.ptr, half_x - half_text_x, half_y - half_text_y, TIME_SIZE, rl.WHITE);
 }
 
 pub fn deinit(self: *GameScreen) void {

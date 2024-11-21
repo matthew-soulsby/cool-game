@@ -79,6 +79,7 @@ pub const Current = struct {
             .game = GameScreen{
                 .screen_width = self.screen_width,
                 .screen_height = self.screen_height,
+                .next_screen = self.exit_screen,
             },
         };
 
@@ -101,6 +102,7 @@ pub const Current = struct {
                 game_screen.*.handleInput();
                 game_screen.*.handleBallCollisions();
                 game_screen.*.updatePositions();
+                game_screen.handleFinish();
             },
         }
     }
